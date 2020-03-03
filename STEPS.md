@@ -27,3 +27,4 @@
      npm install
      npm run build
    ```
+4. Copy gradle build files, rename App.java to Server.java

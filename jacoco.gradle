@@ -1,0 +1,36 @@
+apply plugin: 'jacoco'
+
+def minThreshold = findProperty('jacoco.violationThreshold') ?: 1.0
+
+jacoco {
+    toolVersion = '0.8.5'
+    reportsDir = file("${buildDir}/reports/jacoco")
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        csv.enabled false
+        html.enabled true
+        html.destination file("${buildDir}/reports/jacoco-html")
+    }
+}
+
+jacocoTestCoverageVerification {
+    def violationThreshold = minThreshold as Float
+
+    violationRules {
+        rule {
+            limit {
+                minimum = violationThreshold
+            }
+            limit {
+                counter = 'BRANCH'
+                minimum = violationThreshold
+            }
+        }
+    }
+}
+
+jacocoTestCoverageVerification.dependsOn jacocoTestReport
+check.dependsOn jacocoTestCoverageVerification

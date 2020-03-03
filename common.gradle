@@ -1,0 +1,38 @@
+apply plugin: "com.github.ben-manes.versions"
+apply plugin: "com.gorylenko.gradle-git-properties"
+
+gitProperties {
+  extProperty = 'gitProps'
+}
+
+generateGitProperties.outputs.upToDateWhen { false } // make sure generateGitProperties task always executes
+
+jar {
+  manifest {
+    attributes(
+      'Built-By'             : System.properties['user.name'],
+      'Build-Timestamp'      : new java.text.SimpleDateFormat('yyyy-MM-dd\'T\'HH:mm:ss.SSSZ').format(new Date()),
+      'Created-By'           : "Gradle ${gradle.gradleVersion}",
+      'Build-Jdk'            : "${System.properties['java.version']} (${System.properties['java.vendor']} ${System.properties['java.vm.version']})",
+      'Build-OS'             : "${System.properties['os.name']} ${System.properties['os.arch']} ${System.properties['os.version']}",
+      'Build-Revision'       : "${-> project.ext.gitProps['git.commit.id']}",
+      'Git-URL'              : "${-> project.ext.gitProps['git.remote.origin.url']}",
+      'Git-Commit-Time'      : "${-> project.ext.gitProps['git.commit.time']}",
+      'Git-Commit-User-Name' : "${-> project.ext.gitProps['git.commit.user.name']}",
+      'Git-Commit-Tag'       : "${-> project.ext.gitProps['git.closest.tag.name']}",
+    )
+  }
+}
+
+dependencyUpdates.resolutionStrategy {
+  componentSelection { rules ->
+    rules.all { ComponentSelection selection ->
+      boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview', 'b', 'ea'].any { qualifier ->
+        selection.candidate.version ==~ /(?i).*[.-]$qualifier[.\d-+]*/
+      }
+      if (rejected) {
+        selection.reject('Release candidate')
+      }
+    }
+  }
+}
