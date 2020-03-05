@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <!-- Output to STDOUT, Docker logging drivers will capture it -->
+        <Console name="DEFAULT" target="SYSTEM_ERR">
+            <PatternLayout pattern="%d{HH:mm:ss} [%highlight{%-5level}] [%logger{36}] %msg%throwable{5}%n" />
+        </Console>
+        <!-- Output to STDERR, Docker logging drivers will capture it -->
+        <Console name="ACCESS" target="SYSTEM_OUT">
+            <PatternLayout pattern="%m%n" />
+        </Console>
+    </Appenders>
+    <Loggers>
+        <AsyncLogger name="org.apache.logging.log4j2" level="warn" additivity="false">
+            <AppenderRef ref="DEFAULT"/>
+        </AsyncLogger>
+        <AsyncLogger name="accessLog" level="info" additivity="false">
+            <AppenderRef ref="ACCESS"/>
+        </AsyncLogger>
+        <AsyncRoot level="INFO">
+            <AppenderRef ref="DEFAULT"/>
+        </AsyncRoot>
+    </Loggers>
+</Configuration>

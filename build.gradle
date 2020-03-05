@@ -9,7 +9,7 @@ plugins {
 }
 
 ext {
-  restEasyVersion = '4.4.2.Final'
+  restEasyVersion = '4.5.2.Final'
   undertowVersion = '2.0.29.Final'
   junit5Version = '5.6.0'
   jacksonVersion = '2.10.2'
@@ -52,7 +52,7 @@ dependencies {
 
   implementation "io.undertow:undertow-core"
   implementation "io.undertow:undertow-servlet";
-  implementation "org.jboss.resteasy:resteasy-core-spi"
+  implementation "org.jboss.resteasy:resteasy-core:${restEasyVersion}"
   implementation "org.jboss.resteasy:resteasy-jackson2-provider"
   // Override guava 16.0 coming from resteasy-jackson2-provider [CVE 2018-10237]
   implementation "com.google.guava:guava:28.2-jre"
