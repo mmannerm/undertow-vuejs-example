@@ -4,6 +4,7 @@
 package com.gridmancer.example.undertow.vuejs;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import mockit.Mocked;
@@ -15,14 +16,18 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 class ServerTest {
-    private CloseableHttpClient client = HttpClients.createDefault();
+    private CloseableHttpClient client;
     private CloseableHttpResponse response;
     private Server server;
+
+    @BeforeEach
+    public void init() throws Exception {
+        client = TestHelper.createUnsecureTestClient();
+    }
 
     @AfterEach
     public void tearDown() {
@@ -56,7 +61,7 @@ class ServerTest {
         server = new Server(0);
         server.start();
 
-        HttpGet ping = new HttpGet("http://localhost:" + server.getPort() + "/thisendpointwillnotexist");
+        HttpGet ping = new HttpGet("https://localhost:" + server.getPort() + "/thisendpointwillnotexist");
 
         try (CloseableHttpResponse response = client.execute(ping)) {
             assertEquals(404, response.getStatusLine().getStatusCode());

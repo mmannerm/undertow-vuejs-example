@@ -3,6 +3,7 @@ package com.gridmancer.example.undertow.vuejs;
 import java.net.InetSocketAddress;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import javax.net.ssl.SSLContext;
 import javax.servlet.ServletException;
 import javax.ws.rs.core.Application;
 
@@ -35,6 +36,8 @@ public class Server {
 
     private Undertow instance;
     private int port;
+    private String publicKeyPath;
+    private String privateKeyPath;
 
     // This is exposed only for unit testing purposes instead of local variable in
     // main()
@@ -42,6 +45,8 @@ public class Server {
 
     public Server(final int port) {
         this.port = port;
+        this.publicKeyPath = "src/test/resources/certificate.pem";
+        this.privateKeyPath = "src/test/resources/key.pem";
     }
 
     public void stop() {
@@ -65,15 +70,22 @@ public class Server {
     }
 
     public void start() throws Exception {
+
+        log.info("publicKeyPath={}", publicKeyPath);
+        log.info("privateKeyPath={}", privateKeyPath);
+
         // http://undertow.io/undertow-docs/undertow-docs-2.0.0/index.html#request-limiting-handler
         final RequestLimitingHandler requestLimitingHandler = new RequestLimitingHandler(new RequestLimit(150, 300),
                 Handlers.path().addPrefixPath("/", getServletHandler(new RestApplication())));
         final HttpHandler accessLogHandler = new AccessLogHandler(requestLimitingHandler, new BasicLogReceiver(),
                 "combined", CLASSLOADER);
 
+        final SSLContext sslContext = SSLContext.getInstance("TLSv1.3");
+        sslContext.init(KeyStoreHelper.getKeyManagers(publicKeyPath, privateKeyPath), null, null);
+
         final Undertow.Builder builder = Undertow.builder()
-                .addListener(new Undertow.ListenerBuilder().setType(Undertow.ListenerType.HTTP).setHost("0.0.0.0")
-                        .setPort(port))
+                .addListener(new Undertow.ListenerBuilder().setType(Undertow.ListenerType.HTTPS).setHost("0.0.0.0")
+                        .setPort(port).setSslContext(sslContext))
                 .setSocketOption(Options.CONNECTION_HIGH_WATER, 1500)
                 .setSocketOption(Options.CONNECTION_LOW_WATER, 1200).setSocketOption(Options.BACKLOG, 20)
                 .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, TLS_PROTOCOLS)
