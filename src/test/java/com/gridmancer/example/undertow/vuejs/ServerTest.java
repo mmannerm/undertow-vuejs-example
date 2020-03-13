@@ -7,6 +7,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.smallrye.config.SmallRyeConfigProviderResolver;
 import mockit.Mocked;
 import mockit.Verifications;
 
@@ -18,15 +19,22 @@ import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 
 class ServerTest {
+    private static final ClassLoader CLASSLOADER = ServerTest.class.getClassLoader();
     private CloseableHttpClient client;
     private CloseableHttpResponse response;
     private Server server;
+    private Config config;
 
     @BeforeEach
     public void init() throws Exception {
         client = TestHelper.createUnsecureTestClient();
+        System.setProperty(ConfigLabels.SERVER_PRIVATE_KEY_PATH, CLASSLOADER.getResource("key.pem").getFile());
+        System.setProperty(ConfigLabels.SERVER_CERTIFICATE_PATH, CLASSLOADER.getResource("certificate.pem").getFile());
+        config = ConfigProvider.getConfig();
     }
 
     @AfterEach
@@ -40,6 +48,8 @@ class ServerTest {
             }
             server = null;
         }
+
+        SmallRyeConfigProviderResolver.instance().releaseConfig(config);
     }
 
     @Test
@@ -58,7 +68,7 @@ class ServerTest {
 
     @Test
     public void testUnknownResource() throws Exception {
-        server = new Server(0);
+        server = new Server(config);
         server.start();
 
         HttpGet ping = new HttpGet("https://localhost:" + server.getPort() + "/thisendpointwillnotexist");
@@ -95,4 +105,17 @@ class ServerTest {
             }
         };
     }
+
+    @Test
+    public void testInvalidCertificatePath() {
+        System.clearProperty(ConfigLabels.SERVER_CERTIFICATE_PATH);
+        assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
+    }
+
+    @Test
+    public void testInvalidPrivateKeyPath() {
+        System.clearProperty(ConfigLabels.SERVER_PRIVATE_KEY_PATH);
+        assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
+    }
+
 }

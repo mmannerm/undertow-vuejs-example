@@ -26,16 +26,16 @@ class KeyStoreHelper {
         // prevent instantiation
     }
 
-    public static KeyManager[] getKeyManagers(final String publicKeyPath, final String privateKeyPath)
+    public static KeyManager[] getKeyManagers(final String certificatePath, final String privateKeyPath)
             throws CertificateException, KeyStoreException, NoSuchAlgorithmException, IOException,
             UnrecoverableKeyException {
-        final KeyStore keyStore = createKeyStore(publicKeyPath, privateKeyPath);
+        final KeyStore keyStore = createKeyStore(certificatePath, privateKeyPath);
         final KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         keyManagerFactory.init(keyStore, SECRET);
         return keyManagerFactory.getKeyManagers();
     }
 
-    public static KeyStore createKeyStore(final String publicKeyPath, final String privateKeyPath)
+    public static KeyStore createKeyStore(final String certificatePath, final String privateKeyPath)
             throws CertificateException, IOException, KeyStoreException, NoSuchAlgorithmException {
         final CertificateFactory cf = CertificateFactory.getInstance("X.509");
         final JcaPEMKeyConverter pemConverter = new JcaPEMKeyConverter();
@@ -48,7 +48,7 @@ class KeyStoreHelper {
             privateKey = pemConverter.getPrivateKey(privateKeyInfo);
         }
 
-        certificate = (X509Certificate) cf.generateCertificate(Files.newInputStream(Paths.get(publicKeyPath)));
+        certificate = (X509Certificate) cf.generateCertificate(Files.newInputStream(Paths.get(certificatePath)));
         KeyStore keyStore = KeyStore.getInstance("JKS");
         String alias = certificate.getSubjectX500Principal().getName();
         keyStore.load(null);

@@ -1,0 +1,5 @@
+---
+server:
+  port: 0
+  certificatePath: "src/test/resources/certificate.pem"
+  privateKeyPath: "src/test/resources/key.pem"

@@ -9,6 +9,8 @@ import javax.ws.rs.core.Application;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.microprofile.config.Config;
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.resteasy.core.ResteasyDeploymentImpl;
 import org.jboss.resteasy.plugins.server.servlet.HttpServlet30Dispatcher;
 import org.jboss.resteasy.spi.ResteasyDeployment;
@@ -27,26 +29,25 @@ import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
 
+import static com.gridmancer.example.undertow.vuejs.ConfigLabels.*;
+
 @NotThreadSafe
 public class Server {
     private static final ClassLoader CLASSLOADER = Server.class.getClassLoader();
-    private static final Sequence<String> TLS_PROTOCOLS = Sequence.of("TLSv1.2", "TLSv1.3");
+    private static final Sequence<String> TLS_PROTOCOLS = Sequence.of("TLSv1.3", "TLSv1.2");
 
     private static final Logger log = LogManager.getLogger();
 
     private Undertow instance;
     private int port;
-    private String publicKeyPath;
-    private String privateKeyPath;
+    private final Config config;
 
     // This is exposed only for unit testing purposes instead of local variable in
     // main()
     static Server mainServer;
 
-    public Server(final int port) {
-        this.port = port;
-        this.publicKeyPath = "src/test/resources/certificate.pem";
-        this.privateKeyPath = "src/test/resources/key.pem";
+    public Server(final Config config) {
+        this.config = config;
     }
 
     public void stop() {
@@ -65,13 +66,20 @@ public class Server {
     }
 
     public static void main(final String[] args) throws Exception {
-        mainServer = new Server(0);
+        final Config config = ConfigProvider.getConfig();
+        mainServer = new Server(config);
         mainServer.start();
     }
 
     public void start() throws Exception {
+        final String certificatePath = config.getOptionalValue(SERVER_CERTIFICATE_PATH, String.class)
+                .orElseThrow(() -> new IllegalArgumentException("Missing TLS Certificate"));
+        ;
+        final String privateKeyPath = config.getOptionalValue(SERVER_PRIVATE_KEY_PATH, String.class)
+                .orElseThrow(() -> new IllegalArgumentException("Missing TLS Private Key"));
+        ;
 
-        log.info("publicKeyPath={}", publicKeyPath);
+        log.info("certificatePath={}", certificatePath);
         log.info("privateKeyPath={}", privateKeyPath);
 
         // http://undertow.io/undertow-docs/undertow-docs-2.0.0/index.html#request-limiting-handler
@@ -81,11 +89,11 @@ public class Server {
                 "combined", CLASSLOADER);
 
         final SSLContext sslContext = SSLContext.getInstance("TLSv1.3");
-        sslContext.init(KeyStoreHelper.getKeyManagers(publicKeyPath, privateKeyPath), null, null);
+        sslContext.init(KeyStoreHelper.getKeyManagers(certificatePath, privateKeyPath), null, null);
 
         final Undertow.Builder builder = Undertow.builder()
                 .addListener(new Undertow.ListenerBuilder().setType(Undertow.ListenerType.HTTPS).setHost("0.0.0.0")
-                        .setPort(port).setSslContext(sslContext))
+                        .setPort(config.getOptionalValue(SERVER_HTTPS_PORT, Integer.class).orElse(0)).setSslContext(sslContext))
                 .setSocketOption(Options.CONNECTION_HIGH_WATER, 1500)
                 .setSocketOption(Options.CONNECTION_LOW_WATER, 1200).setSocketOption(Options.BACKLOG, 20)
                 .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, TLS_PROTOCOLS)
@@ -103,7 +111,7 @@ public class Server {
         }
     }
 
-    private HttpHandler getServletHandler(Application app) throws ServletException {
+    private HttpHandler getServletHandler(final Application app) throws ServletException {
         final ResteasyDeployment deployment = new ResteasyDeploymentImpl();
         deployment.setApplication(app);
 
