@@ -1,5 +1,20 @@
 # Undertow+Vue.js Example
 
+## Build
+```
+./gradlew build
+```
+
+### Build only web assets
+```
+./gradlew webpack
+```
+
+## Run locally
+```
+SERVER_CERTIFICATE=src/test/resources/server.crt SERVER_KEY=src/test/resources/server.key build/image/bin/undertow-vuejs-example
+```
+
 ## Project setup
 ```
 npm install

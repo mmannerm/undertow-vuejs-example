@@ -13,6 +13,9 @@ import mockit.Verifications;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.io.IOException;
+
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.HttpClientUtils;
@@ -32,8 +35,8 @@ class ServerTest {
     @BeforeEach
     public void init() throws Exception {
         client = TestHelper.createUnsecureTestClient();
-        System.setProperty(ConfigLabels.SERVER_PRIVATE_KEY_PATH, CLASSLOADER.getResource("key.pem").getFile());
-        System.setProperty(ConfigLabels.SERVER_CERTIFICATE_PATH, CLASSLOADER.getResource("certificate.pem").getFile());
+        System.setProperty(ConfigLabels.SERVER_PRIVATE_KEY_PATH, CLASSLOADER.getResource("server.key").getFile());
+        System.setProperty(ConfigLabels.SERVER_CERTIFICATE_PATH, CLASSLOADER.getResource("server.crt").getFile());
         config = ConfigProvider.getConfig();
     }
 
@@ -79,6 +82,27 @@ class ServerTest {
     }
 
     @Test
+    public void testHealthCheck() throws Exception {
+        server = new Server(config);
+        server.start();
+
+        resourceExists("/api/health");
+    }
+
+    @Test
+    public void testStaticFiles() throws Exception {
+        server = new Server(config);
+        server.start();
+
+        resourceExists("/");
+        resourceExists("/index.html");
+        resourceExists("/favicon.ico");
+        resourceExists("/js/index.js");
+        resourceExists("/js/chunk-vendors.js");
+        resourceExists("/img/logo.82b9c7a5.png");
+    }
+
+    @Test
     public void testAccessLogHandlerMaxLogCount(@Mocked Logger accessLogger, @Mocked LogManager logManager) {
         Server.BasicLogReceiver accessLogReceiver = new Server.BasicLogReceiver(1);
         accessLogReceiver.logMessage("foo1");
@@ -118,4 +142,11 @@ class ServerTest {
         assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
     }
 
+    private void resourceExists(final String resource) throws ClientProtocolException, IOException {
+        HttpGet request = new HttpGet("https://localhost:" + server.getPort() + resource);
+
+        try (CloseableHttpResponse response = client.execute(request)) {
+            assertEquals(200, response.getStatusLine().getStatusCode());
+        }
+    }
 }

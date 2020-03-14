@@ -25,6 +25,8 @@ import io.undertow.server.handlers.RequestLimit;
 import io.undertow.server.handlers.RequestLimitingHandler;
 import io.undertow.server.handlers.accesslog.AccessLogHandler;
 import io.undertow.server.handlers.accesslog.AccessLogReceiver;
+import io.undertow.server.handlers.resource.ClassPathResourceManager;
+import io.undertow.server.handlers.resource.ResourceHandler;
 import io.undertow.servlet.Servlets;
 import io.undertow.servlet.api.DeploymentInfo;
 import io.undertow.servlet.api.DeploymentManager;
@@ -84,7 +86,10 @@ public class Server {
 
         // http://undertow.io/undertow-docs/undertow-docs-2.0.0/index.html#request-limiting-handler
         final RequestLimitingHandler requestLimitingHandler = new RequestLimitingHandler(new RequestLimit(150, 300),
-                Handlers.path().addPrefixPath("/", getServletHandler(new RestApplication())));
+                Handlers.path()
+                    .addPrefixPath("/api", getServletHandler(new RestApplication()))
+                    .addPrefixPath("/", new ResourceHandler(new ClassPathResourceManager(CLASSLOADER, "META-INF/webapp/")))
+                );
         final HttpHandler accessLogHandler = new AccessLogHandler(requestLimitingHandler, new BasicLogReceiver(),
                 "combined", CLASSLOADER);
 
@@ -99,6 +104,7 @@ public class Server {
                 .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, TLS_PROTOCOLS)
                 .setSocketOption(UndertowOptions.SSL_USER_CIPHER_SUITES_ORDER, true)
                 .setServerOption(UndertowOptions.ALWAYS_SET_DATE, true)
+                .setServerOption(UndertowOptions.ENABLE_HTTP2, true)
                 .setIoThreads(Math.max(1, Runtime.getRuntime().availableProcessors() - 1)).setHandler(accessLogHandler)
                 .setWorkerThreads(150);
 
@@ -115,7 +121,7 @@ public class Server {
         final ResteasyDeployment deployment = new ResteasyDeploymentImpl();
         deployment.setApplication(app);
 
-        final DeploymentInfo servletBuilder = Servlets.deployment().setClassLoader(CLASSLOADER).setContextPath("/")
+        final DeploymentInfo servletBuilder = Servlets.deployment().setClassLoader(CLASSLOADER).setContextPath("/api")
                 .setDeploymentName("RestEasy")
                 .addServlets(Servlets.servlet("ResteasyServlet", HttpServlet30Dispatcher.class).setAsyncSupported(true)
                         .setLoadOnStartup(1).addMapping("/"))

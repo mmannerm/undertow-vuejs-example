@@ -7,5 +7,5 @@ public final class ConfigLabels {
 
     public static final String SERVER_HTTPS_PORT = "server.httpsPort";
     public static final String SERVER_CERTIFICATE_PATH = "server.certificate";
-    public static final String SERVER_PRIVATE_KEY_PATH = "server.privateKey";
+    public static final String SERVER_PRIVATE_KEY_PATH = "server.key";
 }
