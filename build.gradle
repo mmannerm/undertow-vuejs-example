@@ -16,6 +16,7 @@ ext {
   log4jVersion = '2.13.0'
   bouncyCastleVersion = '1.64'
   smallryeConfigVersion = '1.7.0'
+  assertJVersion = '3.15.0'
 }
 
 group 'com.gridmancer'
@@ -69,6 +70,7 @@ dependencies {
 
   testImplementation "org.jmockit:jmockit:1.49"
   testImplementation "org.junit.jupiter:junit-jupiter-api"
+  testImplementation "org.assertj:assertj-core:${assertJVersion}"
   testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
 }
 

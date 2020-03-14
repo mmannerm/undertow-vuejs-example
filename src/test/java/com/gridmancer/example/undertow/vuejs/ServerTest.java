@@ -3,150 +3,154 @@
  */
 package com.gridmancer.example.undertow.vuejs;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import io.smallrye.config.SmallRyeConfigProviderResolver;
-import mockit.Mocked;
-import mockit.Verifications;
-
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.smallrye.config.SmallRyeConfigProviderResolver;
 import java.io.IOException;
-
+import mockit.Mocked;
+import mockit.Verifications;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 class ServerTest {
-    private static final ClassLoader CLASSLOADER = ServerTest.class.getClassLoader();
-    private CloseableHttpClient client;
-    private CloseableHttpResponse response;
-    private Server server;
-    private Config config;
+  private static final ClassLoader CLASSLOADER = ServerTest.class.getClassLoader();
+  private CloseableHttpClient client;
+  private CloseableHttpResponse response;
+  private Server server;
+  private Config config;
 
-    @BeforeEach
-    public void init() throws Exception {
-        client = TestHelper.createUnsecureTestClient();
-        System.setProperty(ConfigLabels.SERVER_KEY, CLASSLOADER.getResource("server.key").getFile());
-        System.setProperty(ConfigLabels.SERVER_CERTIFICATE, CLASSLOADER.getResource("server.crt").getFile());
-        config = ConfigProvider.getConfig();
+  @BeforeEach
+  public void init() throws Exception {
+    client = TestHelper.createUnsecureTestClient();
+    System.setProperty(ConfigLabels.SERVER_KEY, CLASSLOADER.getResource("server.key").getFile());
+    System.setProperty(
+        ConfigLabels.SERVER_CERTIFICATE, CLASSLOADER.getResource("server.crt").getFile());
+    config = ConfigProvider.getConfig();
+  }
+
+  @AfterEach
+  public void tearDown() {
+    HttpClientUtils.closeQuietly(response);
+    HttpClientUtils.closeQuietly(client);
+
+    if (server != null) {
+      if (server.isRunning()) {
+        server.stop();
+      }
+      server = null;
     }
 
-    @AfterEach
-    public void tearDown() {
-        HttpClientUtils.closeQuietly(response);
-        HttpClientUtils.closeQuietly(client);
+    SmallRyeConfigProviderResolver.instance().releaseConfig(config);
+  }
 
-        if (server != null) {
-            if (server.isRunning()) {
-                server.stop();
-            }
-            server = null;
-        }
+  @Test
+  public void testServerMain() throws Throwable {
+    Server.main(new String[0]);
+    assertNotNull(Server.mainServer);
+    assertTrue(Server.mainServer.isRunning());
 
-        SmallRyeConfigProviderResolver.instance().releaseConfig(config);
+    Server.mainServer.stop();
+    assertFalse(Server.mainServer.isRunning());
+
+    // Server can be stopped twice
+    Server.mainServer.stop();
+    assertFalse(Server.mainServer.isRunning());
+  }
+
+  @Test
+  public void testUnknownResource() throws Exception {
+    server = new Server(config);
+    server.start();
+
+    HttpGet ping =
+        new HttpGet("https://localhost:" + server.getPort() + "/thisendpointwillnotexist");
+
+    // We should receive the index.html
+    try (CloseableHttpResponse response = client.execute(ping)) {
+      assertEquals(200, response.getStatusLine().getStatusCode());
+      assertThat(EntityUtils.toString(response.getEntity())).contains("/js/index.js");
     }
+  }
 
-    @Test
-    public void testServerMain() throws Throwable {
-        Server.main(new String[0]);
-        assertNotNull(Server.mainServer);
-        assertTrue(Server.mainServer.isRunning());
+  @Test
+  public void testHealthCheck() throws Exception {
+    server = new Server(config);
+    server.start();
 
-        Server.mainServer.stop();
-        assertFalse(Server.mainServer.isRunning());
+    resourceExists("/api/health");
+  }
 
-        // Server can be stopped twice
-        Server.mainServer.stop();
-        assertFalse(Server.mainServer.isRunning());
+  @Test
+  public void testStaticFiles() throws Exception {
+    server = new Server(config);
+    server.start();
+
+    resourceExists("/");
+    resourceExists("/index.html");
+    resourceExists("/favicon.ico");
+    resourceExists("/js/index.js");
+    resourceExists("/js/chunk-vendors.js");
+    resourceExists("/img/logo.82b9c7a5.png");
+  }
+
+  @Test
+  public void testAccessLogHandlerMaxLogCount(
+      @Mocked Logger accessLogger, @Mocked LogManager logManager) {
+    Server.BasicLogReceiver accessLogReceiver = new Server.BasicLogReceiver(1);
+    accessLogReceiver.logMessage("foo1");
+    accessLogReceiver.logMessage("foo2");
+
+    new Verifications() {
+      {
+        accessLogger.info(anyString);
+        times = 1;
+      }
+    };
+  }
+
+  @Test
+  public void testAccessLogHandler(@Mocked Logger accessLogger, @Mocked LogManager logManager) {
+    Server.BasicLogReceiver accessLogReceiver = new Server.BasicLogReceiver();
+    accessLogReceiver.logMessage("foo1");
+    accessLogReceiver.logMessage("foo2");
+
+    new Verifications() {
+      {
+        accessLogger.info(anyString);
+        times = 2;
+      }
+    };
+  }
+
+  @Test
+  public void testInvalidCertificatePath() {
+    System.clearProperty(ConfigLabels.SERVER_CERTIFICATE);
+    assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
+  }
+
+  @Test
+  public void testInvalidPrivateKeyPath() {
+    System.clearProperty(ConfigLabels.SERVER_KEY);
+    assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
+  }
+
+  private void resourceExists(final String resource) throws ClientProtocolException, IOException {
+    HttpGet request = new HttpGet("https://localhost:" + server.getPort() + resource);
+
+    try (CloseableHttpResponse response = client.execute(request)) {
+      assertEquals(200, response.getStatusLine().getStatusCode());
     }
-
-    @Test
-    public void testUnknownResource() throws Exception {
-        server = new Server(config);
-        server.start();
-
-        HttpGet ping = new HttpGet("https://localhost:" + server.getPort() + "/thisendpointwillnotexist");
-
-        try (CloseableHttpResponse response = client.execute(ping)) {
-            assertEquals(404, response.getStatusLine().getStatusCode());
-        }
-    }
-
-    @Test
-    public void testHealthCheck() throws Exception {
-        server = new Server(config);
-        server.start();
-
-        resourceExists("/api/health");
-    }
-
-    @Test
-    public void testStaticFiles() throws Exception {
-        server = new Server(config);
-        server.start();
-
-        resourceExists("/");
-        resourceExists("/index.html");
-        resourceExists("/favicon.ico");
-        resourceExists("/js/index.js");
-        resourceExists("/js/chunk-vendors.js");
-        resourceExists("/img/logo.82b9c7a5.png");
-    }
-
-    @Test
-    public void testAccessLogHandlerMaxLogCount(@Mocked Logger accessLogger, @Mocked LogManager logManager) {
-        Server.BasicLogReceiver accessLogReceiver = new Server.BasicLogReceiver(1);
-        accessLogReceiver.logMessage("foo1");
-        accessLogReceiver.logMessage("foo2");
-
-        new Verifications() {
-            {
-                accessLogger.info(anyString);
-                times = 1;
-            }
-        };
-    }
-
-    @Test
-    public void testAccessLogHandler(@Mocked Logger accessLogger, @Mocked LogManager logManager) {
-        Server.BasicLogReceiver accessLogReceiver = new Server.BasicLogReceiver();
-        accessLogReceiver.logMessage("foo1");
-        accessLogReceiver.logMessage("foo2");
-
-        new Verifications() {
-            {
-                accessLogger.info(anyString);
-                times = 2;
-            }
-        };
-    }
-
-    @Test
-    public void testInvalidCertificatePath() {
-        System.clearProperty(ConfigLabels.SERVER_CERTIFICATE);
-        assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
-    }
-
-    @Test
-    public void testInvalidPrivateKeyPath() {
-        System.clearProperty(ConfigLabels.SERVER_KEY);
-        assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
-    }
-
-    private void resourceExists(final String resource) throws ClientProtocolException, IOException {
-        HttpGet request = new HttpGet("https://localhost:" + server.getPort() + resource);
-
-        try (CloseableHttpResponse response = client.execute(request)) {
-            assertEquals(200, response.getStatusLine().getStatusCode());
-        }
-    }
+  }
 }
