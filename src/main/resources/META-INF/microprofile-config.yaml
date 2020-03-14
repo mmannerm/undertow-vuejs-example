@@ -1,0 +1,5 @@
+---
+server:
+  https:
+    port: 4443
+  proxyProtocol: false

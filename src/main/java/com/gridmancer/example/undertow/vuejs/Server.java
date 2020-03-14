@@ -74,22 +74,19 @@ public class Server {
     }
 
     public void start() throws Exception {
-        final String certificatePath = config.getOptionalValue(SERVER_CERTIFICATE_PATH, String.class)
+        final String certificatePath = config.getOptionalValue(SERVER_CERTIFICATE, String.class)
                 .orElseThrow(() -> new IllegalArgumentException("Missing TLS Certificate"));
-        ;
-        final String privateKeyPath = config.getOptionalValue(SERVER_PRIVATE_KEY_PATH, String.class)
+        final String privateKeyPath = config.getOptionalValue(SERVER_KEY, String.class)
                 .orElseThrow(() -> new IllegalArgumentException("Missing TLS Private Key"));
-        ;
+        final Boolean useProxyProtocol = config.getOptionalValue(SERVER_PROXYPROTOCOL, Boolean.class).orElse(false);
 
-        log.info("certificatePath={}", certificatePath);
-        log.info("privateKeyPath={}", privateKeyPath);
+        log.info("certificatePath={} privateKeyPath={} useProxyProtocol={}", certificatePath, privateKeyPath, useProxyProtocol);
 
         // http://undertow.io/undertow-docs/undertow-docs-2.0.0/index.html#request-limiting-handler
         final RequestLimitingHandler requestLimitingHandler = new RequestLimitingHandler(new RequestLimit(150, 300),
-                Handlers.path()
-                    .addPrefixPath("/api", getServletHandler(new RestApplication()))
-                    .addPrefixPath("/", new ResourceHandler(new ClassPathResourceManager(CLASSLOADER, "META-INF/webapp/")))
-                );
+                Handlers.path().addPrefixPath("/api", getServletHandler(new RestApplication())).addPrefixPath("/",
+                        new ResourceHandler(new ClassPathResourceManager(CLASSLOADER, "META-INF/resources/"))));
+        // TODO: Move healthcheck outside accesslog
         final HttpHandler accessLogHandler = new AccessLogHandler(requestLimitingHandler, new BasicLogReceiver(),
                 "combined", CLASSLOADER);
 
@@ -98,7 +95,8 @@ public class Server {
 
         final Undertow.Builder builder = Undertow.builder()
                 .addListener(new Undertow.ListenerBuilder().setType(Undertow.ListenerType.HTTPS).setHost("0.0.0.0")
-                        .setPort(config.getOptionalValue(SERVER_HTTPS_PORT, Integer.class).orElse(0)).setSslContext(sslContext))
+                        .setPort(config.getOptionalValue(SERVER_HTTPS_PORT, Integer.class).orElse(0))
+                        .setSslContext(sslContext).setUseProxyProtocol(useProxyProtocol))
                 .setSocketOption(Options.CONNECTION_HIGH_WATER, 1500)
                 .setSocketOption(Options.CONNECTION_LOW_WATER, 1200).setSocketOption(Options.BACKLOG, 20)
                 .setSocketOption(Options.SSL_ENABLED_PROTOCOLS, TLS_PROTOCOLS)

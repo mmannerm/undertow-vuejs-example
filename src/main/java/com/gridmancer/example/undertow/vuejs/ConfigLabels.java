@@ -5,7 +5,8 @@ public final class ConfigLabels {
         // prevent instantiation
     }
 
-    public static final String SERVER_HTTPS_PORT = "server.httpsPort";
-    public static final String SERVER_CERTIFICATE_PATH = "server.certificate";
-    public static final String SERVER_PRIVATE_KEY_PATH = "server.key";
+    public static final String SERVER_HTTPS_PORT = "server.https.port";
+    public static final String SERVER_CERTIFICATE = "server.certificate";
+    public static final String SERVER_KEY = "server.key";
+    public static final String SERVER_PROXYPROTOCOL = "server.proxyProtocol";
 }

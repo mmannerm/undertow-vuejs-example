@@ -35,8 +35,8 @@ class ServerTest {
     @BeforeEach
     public void init() throws Exception {
         client = TestHelper.createUnsecureTestClient();
-        System.setProperty(ConfigLabels.SERVER_PRIVATE_KEY_PATH, CLASSLOADER.getResource("server.key").getFile());
-        System.setProperty(ConfigLabels.SERVER_CERTIFICATE_PATH, CLASSLOADER.getResource("server.crt").getFile());
+        System.setProperty(ConfigLabels.SERVER_KEY, CLASSLOADER.getResource("server.key").getFile());
+        System.setProperty(ConfigLabels.SERVER_CERTIFICATE, CLASSLOADER.getResource("server.crt").getFile());
         config = ConfigProvider.getConfig();
     }
 
@@ -132,13 +132,13 @@ class ServerTest {
 
     @Test
     public void testInvalidCertificatePath() {
-        System.clearProperty(ConfigLabels.SERVER_CERTIFICATE_PATH);
+        System.clearProperty(ConfigLabels.SERVER_CERTIFICATE);
         assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
     }
 
     @Test
     public void testInvalidPrivateKeyPath() {
-        System.clearProperty(ConfigLabels.SERVER_PRIVATE_KEY_PATH);
+        System.clearProperty(ConfigLabels.SERVER_KEY);
         assertThrows(IllegalArgumentException.class, () -> Server.main(new String[0]));
     }
 

@@ -15,7 +15,7 @@ ext {
   jacksonVersion = '2.10.2'
   log4jVersion = '2.13.0'
   bouncyCastleVersion = '1.64'
-  smallryeConfigVersion = '1.5.0'
+  smallryeConfigVersion = '1.7.0'
 }
 
 group 'com.gridmancer'
@@ -29,6 +29,7 @@ apply from: "jacoco.gradle"
 
 repositories {
     jcenter()
+    mavenCentral()
 }
 
 configurations {
@@ -58,7 +59,8 @@ dependencies {
   implementation "org.jboss.resteasy:resteasy-jackson2-provider"
   // Override guava 16.0 coming from resteasy-jackson2-provider [CVE 2018-10237]
   implementation "com.google.guava:guava:28.2-jre"
-  implementation "io.smallrye:smallrye-config:${smallryeConfigVersion}"
+  implementation "io.smallrye.config:smallrye-config:${smallryeConfigVersion}"
+  implementation "io.smallrye.config:smallrye-config-source-yaml:${smallryeConfigVersion}"
 
   implementation "org.apache.httpcomponents:httpclient:4.5.11"
 
