@@ -35,6 +35,10 @@ npm run build
 npm run lint
 ```
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+
 [vue-create]: https://cli.vuejs.org/guide/creating-a-project.html#vue-create
 [gradle-webpack]: https://guides.gradle.org/running-webpack-with-gradle/
 [vue-cli-webpack]: https://cli.vuejs.org/guide/webpack.html
