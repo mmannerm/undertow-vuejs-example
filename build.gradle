@@ -42,9 +42,9 @@ reckon {
 
 reckonTagCreate.dependsOn check
 
-apply from: "common.gradle"
-apply from: "jacoco.gradle"
-apply from: "container.gradle"
+apply from: "gradle-common/common.gradle"
+apply from: "gradle-common/jacoco.gradle"
+apply from: "gradle-common/container.gradle"
 
 repositories {
     jcenter()
