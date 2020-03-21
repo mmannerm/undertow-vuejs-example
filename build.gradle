@@ -4,6 +4,9 @@ plugins {
   id "com.gorylenko.gradle-git-properties" version "2.2.2"
   id "org.ajoberstar.reckon" version "0.12.0"
   id "com.palantir.docker" version "0.25.0"
+  id "com.palantir.docker-compose" version "0.25.0"
+  id "com.patdouble.cucumber-jvm" version "0.19"
+  id "eu.leontebbens.gradle.chromedriver-updater" version "1.6.2"
   id "de.undercouch.download" version "4.0.4"
   id "jacoco"
   id "org.beryx.runtime" version "1.8.0"
@@ -22,6 +25,8 @@ ext {
   httpComponentsVersion = '4.5.12'
   disruptorVersion = '3.4.2'
   jmockitVersion = '1.49'
+  cucumberVersion = '5.5.0'
+  seleniumVersion = '3.141.59'
 }
 
 group 'com.gridmancer'
@@ -56,8 +61,12 @@ configurations {
   }
 }
 
+addCucumberSuite 'acceptance'
+
 dependencies {
   testImplementation platform("org.junit:junit-bom:${junit5Version}")
+  acceptanceImplementation platform("org.junit:junit-bom:${junit5Version}")
+  acceptanceImplementation platform("io.cucumber:cucumber-jvm:${cucumberVersion}")
 
   implementation platform("org.jboss.resteasy:resteasy-bom:${restEasyVersion}")
   implementation platform("io.undertow:undertow-parent:${undertowVersion}")
@@ -85,6 +94,26 @@ dependencies {
   testImplementation "org.junit.jupiter:junit-jupiter-api"
   testImplementation "org.assertj:assertj-core:${assertJVersion}"
   testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine"
+
+  acceptanceImplementation "io.cucumber:cucumber-java8"
+  acceptanceImplementation "io.cucumber:cucumber-junit"
+  acceptanceImplementation "org.junit.jupiter:junit-jupiter-api"
+  acceptanceImplementation "org.assertj:assertj-core:${assertJVersion}"
+  acceptanceImplementation "org.seleniumhq.selenium:selenium-java:${seleniumVersion}"
+  acceptanceImplementation "org.seleniumhq.selenium:selenium-chrome-driver:${seleniumVersion}"
+  acceptanceRuntimeOnly "org.junit.vintage:junit-vintage-engine"
+}
+
+acceptance {
+  dependsOn updateChromedriver
+
+  isStrict = true
+  junitReport = true
+  systemProperties = [
+    "webdriver.chrome.driver": "${updateChromedriver.driverLocation}",
+    "testHost": "localhost",
+    "testPort": "4443"
+  ]
 }
 
 test {
@@ -133,3 +162,5 @@ runtime {
         'jdk.unsupported'
     ]
 }
+
+acceptance.dependsOn 'dockerComposeUp'

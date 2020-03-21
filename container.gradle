@@ -1,5 +1,6 @@
 apply plugin: "de.undercouch.download"
 apply plugin: "com.palantir.docker"
+apply plugin: "com.palantir.docker-compose"
 apply plugin: "org.beryx.runtime"
 
 def cacheDir = "${gradle.gradleUserHomeDir}/caches/runtime-jdk"
@@ -30,12 +31,14 @@ task extractLinuxJRE(dependsOn: downloadLinuxJRE, type: Copy) {
 }
 
 docker {
-    name "${project.name}:${project.version}"
-    files tasks.runtime.imageDir, ".dockerignore"
+  name "${project.name}:dev"
+  files tasks.runtime.imageDir, ".dockerignore"
 }
 
 runtime {
-    targetPlatform('linux-x64', "${jdkDir}")
+  targetPlatform('linux-x64', "${jdkDir}")
 }
 
+tasks.docker.dependsOn 'install'
 tasks.runtime.dependsOn 'extractLinuxJRE'
+dockerComposeUp.dependsOn 'docker'

@@ -1,0 +1,12 @@
+---
+version: '2.0'
+services:
+    web:
+        image: "undertow-vuejs-example:dev"
+        ports:
+            - "4443:4443"
+        volumes:
+            - ./src/test/resources:/var/run/app
+        environment:
+            - SERVER_CERTIFICATE=/var/run/app/server.crt
+            - SERVER_KEY=/var/run/app/server.key
