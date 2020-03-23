@@ -1,0 +1,5 @@
+---
+server:
+  https:
+    port: 0
+  proxyProtocol: false
